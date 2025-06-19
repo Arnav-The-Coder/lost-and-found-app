@@ -28,3 +28,5 @@ const job = new cron.CronJob("*/14 * * * *", function () {
     /* 0 0 1 1 * - At midnight, on January 1st
     /* 0 * * * * - Every hour
 */
+
+export default job;
