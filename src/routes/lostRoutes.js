@@ -35,7 +35,7 @@ router.post("/", protectRoute, async (req, res) => {
 });
 
 // Get all lost items using pagination allowing for infinite scrolling.
-router.get("/", protectRoute, async (req, res) => {
+router.get("/", async (req, res) => {
   /*
     Example call from React Native app to get lost items:
     const response = await fetch("http://localhost:3000/api/lost?page=1&limit=5");
