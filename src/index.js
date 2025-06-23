@@ -13,6 +13,8 @@ const PORT = process.env.PORT;
 
 job.start();
 app.use(cors());
+// Need this so Express knows how to parse the raw JSON string coming from fetch calls.
+app.use(express.json());
 
 /*
   This line tells the Express app to use the 'authRoutes' for any requests
