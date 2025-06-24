@@ -14,14 +14,11 @@ router.post("/", protectRoute, async (req, res) => {
       return res.status(400).json({ message: "Please provide all fields." });
     }
 
-    // Upload the image to Cloudinary.
-    const uploadResponse = await cloudinary.uploader.upload(image);
-    const imageUrl = uploadResponse.secure_url; // Converts uploaded image to a secure URL.
     // Save the image to the MongoDB database.
     const newLostItem = new Lost({
       object,
       description,
-      image: imageUrl,
+      image,
       user: req.user._id,
     });
 
