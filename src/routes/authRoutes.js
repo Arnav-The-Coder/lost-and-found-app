@@ -1,6 +1,7 @@
 import express from "express";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
 
 /*
     express.Router() creates a new, isolated instance of middleware and routing.
@@ -10,6 +11,23 @@ import jwt from "jsonwebtoken";
     grouped routes.
 */
 const router = express.Router();
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.ADMIN_EMAIL,
+    pass: process.env.ADMIN_PASSWORD,
+  },
+});
+
+const notifyAdmin = (email, location) => {
+  return transporter.sendMail({
+    from: `"Lost & Found App" <${process.env.ADMIN_EMAIL}>`,
+    to: process.env.ADMIN_EMAIL,
+    subject: "New User Pending Approval",
+    text: `A new user has registered:\nEmail: ${email}\nLocation: ${location}\nApprove or reject in your admin dashboard.`,
+  });
+};
 
 const generateToken = (userId) => {
   /*
@@ -59,22 +77,16 @@ router.post("/register", async (req, res) => {
       location,
       password,
       profileImage,
+      status: "pending",
     });
 
     await user.save();
 
-    // Generate a token for the user.
-    const token = generateToken(user._id);
+    // Notify admin of pending user using nodemailer.
+    await notifyAdmin(email, location);
 
     res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        location: user.location,
-        email: user.email,
-        profileImage: user.profileImage,
-        createdAt: user.createdAt,
-      },
+      message: "Account created and pending admin approval.",
     });
   } catch (error) {
     console.log("Error registering user:", error);
@@ -95,6 +107,13 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email: email });
     if (!user)
       return res.status(400).json({ message: "Invalid email or password." });
+
+    // Block login if user is not approved.
+    if (user.status !== "approved") {
+      return res
+        .status(403)
+        .json({ message: "Account not yet approved by admin." });
+    }
 
     // Check if the password is correct.
     const isPasswordValid = await user.comparePassword(password);

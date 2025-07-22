@@ -22,6 +22,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    role: {
+      type: String,
+      enum: ["admin", "user"],
+      default: "user",
+    },
   },
   { timestamps: true }
 ); // Automatically manage createdAt and updatedAt fields.
