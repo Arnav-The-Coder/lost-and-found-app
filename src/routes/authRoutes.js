@@ -85,8 +85,19 @@ router.post("/register", async (req, res) => {
     // Notify admin of pending user using nodemailer.
     await notifyAdmin(email, location);
 
+    const token = generateToken(user._id);
+
     res.status(201).json({
       message: "Account created and pending admin approval.",
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        location: user.location,
+        role: user.role,
+        profileImage: user.profileImage,
+        createdAt: user.createdAt,
+      },
     });
   } catch (error) {
     console.log("Error registering user:", error);
