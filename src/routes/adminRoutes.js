@@ -43,6 +43,25 @@ router.get("/users/pending", verifyAdmin, async (req, res) => {
   res.json(pendingUsers);
 });
 
+// List users by status or all.
+/* 
+  Example queries:
+  GET /users           
+  GET /users?status=approved
+  GET /users?status=rejected
+*/
+router.get("/users", verifyAdmin, async (req, res) => {
+  try {
+    const statusFilter = req.query.status;
+    const filter = statusFilter ? { status: statusFilter } : {};
+    const users = await User.find(filter).select("-password");
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+});
+
 // Approve user.
 router.patch("/users/:id/approve", verifyAdmin, async (req, res) => {
   try {
