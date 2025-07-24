@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import crypto from "crypto";
 
 /*
     express.Router() creates a new, isolated instance of middleware and routing.
@@ -139,6 +140,71 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     console.log("Error logging in user:", error);
     res.status(500).json({ message: "Internal server error." });
+  }
+});
+
+// Forgot password route.
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    // Generate reset token.
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    // Save token and expiry (e.g. 1 hour) in user document.
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour.
+    await user.save();
+
+    // Send email with reset link containing the token.
+    const resetUrl = `lostfoundapp://reset-password?token=${resetToken}`;
+
+    // Send reset email.
+    await transporter.sendMail({
+      from: `"Lost & Found Admin" <${process.env.ADMIN_EMAIL}>`,
+      to: user.email,
+      subject: "Password Reset Request",
+      text:
+        `Hello,\n\nYou requested a password reset for your Lost & Found account.\n` +
+        `Please click the link below (or copy-paste it) to reset your password:\n\n${resetUrl}\n\n` +
+        `This link will expire in 1 hour.\n\nIf you did not request this, please ignore this email.\n\nThanks,\nLost & Found Team`,
+    });
+
+    res.json({ message: "Password reset email sent." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error." });
+  }
+});
+
+// Reset password route.
+router.post("/reset-password", async (req, res) => {
+  const { token, newPassword } = req.body;
+  try {
+    // Find user by token and check if token still valid.
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired token." });
+    }
+
+    // Update password and clear fields.
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ message: "Password reset successful." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error." });
   }
 });
 
