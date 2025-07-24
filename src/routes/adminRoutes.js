@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/User.js";
 import { verifyAdmin } from "../middleware/admin.middleware.js";
 import nodemailer from "nodemailer";
+import LostItem from "../models/Lost.js";
 
 const router = express.Router();
 
@@ -53,9 +54,23 @@ router.get("/users/pending", verifyAdmin, async (req, res) => {
 router.get("/users", verifyAdmin, async (req, res) => {
   try {
     const statusFilter = req.query.status;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     const filter = statusFilter ? { status: statusFilter } : {};
-    const users = await User.find(filter).select("-password");
-    res.json(users);
+
+    const users = await User.find(filter)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .select("-password");
+
+    const total = await User.countDocuments(filter);
+
+    res.json({
+      users,
+      total,
+      page,
+      limit,
+    });
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ message: "Internal server error." });
@@ -102,10 +117,15 @@ router.delete("/users/:id", verifyAdmin, async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    // Delete lost items owned by user.
+    await LostItem.deleteMany({ ownerId: user._id });
+
     await sendStatusEmail(user.email, "deleted");
     await User.findByIdAndDelete(req.params.id);
 
-    res.json({ message: "User deleted and notified." });
+    res.json({
+      message: "User and associated lost items deleted and notified.",
+    });
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({ message: "Internal server error." });
