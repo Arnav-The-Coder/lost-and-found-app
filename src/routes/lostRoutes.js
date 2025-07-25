@@ -110,7 +110,7 @@ router.delete("/:id", protectRoute, async (req, res) => {
 });
 
 // Get lost items found by the logged-in user.
-router.get("/user", async (req, res) => {
+router.get("/user", protectRoute, async (req, res) => {
   try {
     const lostItems = await Lost.find({ user: req.user._id }).sort({
       createdAt: -1,
