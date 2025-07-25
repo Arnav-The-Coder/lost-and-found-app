@@ -2,8 +2,17 @@ import express from "express";
 import cloudinary from "../lib/cloudinary.js";
 import Lost from "../models/Lost.js";
 import protectRoute from "../middleware/auth.middleware.js";
+import nodemailer from "nodemailer";
 
 const router = express.Router();
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.ADMIN_EMAIL,
+    pass: process.env.ADMIN_PASSWORD,
+  },
+});
 
 // Post a lost item, before posting, the user must be authenticated.
 router.post("/", protectRoute, async (req, res) => {
@@ -101,7 +110,7 @@ router.delete("/:id", protectRoute, async (req, res) => {
 });
 
 // Get lost items found by the logged-in user.
-router.get("/user", protectRoute, async (req, res) => {
+router.get("/user", async (req, res) => {
   try {
     const lostItems = await Lost.find({ user: req.user._id }).sort({
       createdAt: -1,
@@ -109,6 +118,57 @@ router.get("/user", protectRoute, async (req, res) => {
     res.json(lostItems);
   } catch (error) {
     console.log("Error fetching user's lost items:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+});
+
+// Report lost item feature.
+router.post("/report", async (req, res) => {
+  const { lostItemId } = req.body;
+
+  if (!lostItemId) {
+    return res.status(400).json({ message: "Lost item ID is required." });
+  }
+
+  try {
+    // Find lost item and populate the *user* who posted
+    const lostItem = await Lost.findById(lostItemId).populate("user");
+    if (!lostItem) {
+      return res.status(404).json({ message: "Lost item not found." });
+    }
+    const poster = lostItem.user;
+
+    // Compose the email body for the admin
+    const mailBody = `
+      A lost item was reported by a user.
+
+      LOST ITEM DETAILS
+      -----------------
+      Object:      ${lostItem.object}
+      Description: ${lostItem.description}
+      Image:       ${lostItem.image}
+      Created at:  ${lostItem.createdAt}
+
+      POSTED BY ACCOUNT
+      -----------------
+      Email:    ${poster.email}
+      Location: ${poster.location}
+      User ID:  ${poster._id}
+
+      You may investigate this listing in the admin dashboard and consider removing the account if necessary.
+    `.trim();
+
+    // Send mail to admin
+    await transporter.sendMail({
+      from: `"Lost & Found App" <${process.env.ADMIN_EMAIL}>`,
+      to: process.env.ADMIN_EMAIL,
+      subject: `Lost Item Reported: ${lostItem.object}`,
+      text: mailBody,
+    });
+
+    res.json({ message: "Lost item report sent to admin." });
+  } catch (error) {
+    console.error("Lost item report error:", error);
     res.status(500).json({ message: "Internal server error." });
   }
 });
