@@ -118,7 +118,7 @@ router.delete("/users/:id", verifyAdmin, async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Delete lost items owned by user.
-    await LostItem.deleteMany({ ownerId: user._id });
+    await LostItem.deleteMany({ user: user._id });
 
     await sendStatusEmail(user.email, "deleted");
     await User.findByIdAndDelete(req.params.id);
