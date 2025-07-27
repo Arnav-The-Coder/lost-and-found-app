@@ -170,8 +170,17 @@ router.post("/forgot-password", async (req, res) => {
       subject: "Password Reset Request",
       text:
         `Hello,\n\nYou requested a password reset for your Lost & Found account.\n` +
-        `Please click the link below (or copy-paste it) to reset your password:\n\n${resetUrl}\n\n` +
+        `Please click the link or copy-paste it into your browser:\n${resetUrl}\n\n` +
         `This link will expire in 1 hour.\n\nIf you did not request this, please ignore this email.\n\nThanks,\nLost & Found Team`,
+      html: `
+        <p>Hello,</p>
+        <p>You requested a password reset for your Lost & Found account.</p>
+        <p>Please click <a href="${resetUrl}">here to reset your password</a> or copy-paste the link below:</p>
+        <p><code>${resetUrl}</code></p>
+        <p>This link will expire in 1 hour.</p>
+        <p>If you did not request this, please ignore this email.</p>
+        <p>Thanks,<br/>Lost & Found Team</p>
+      `,
     });
 
     res.json({ message: "Password reset email sent." });
