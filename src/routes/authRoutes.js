@@ -161,7 +161,7 @@ router.post("/forgot-password", async (req, res) => {
     await user.save();
 
     // Send email with reset link containing the token.
-    const resetUrl = `https://${process.env.API_URL}/api/auth/deep-reset?token=${resetToken}`;
+    const resetUrl = `${process.env.API_URL}/api/auth/deep-reset?token=${resetToken}`;
 
     // Send reset email.
     await transporter.sendMail({
@@ -198,7 +198,7 @@ router.get("/deep-reset", (req, res) => {
     return res.status(400).send("Missing token.");
   }
 
-  // Redirect to your app using custom URI scheme
+  // Redirect to your app using custom URI scheme.
   const deepLink = `lostfoundapp://reset-password?token=${token}`;
   return res.redirect(302, deepLink);
 });

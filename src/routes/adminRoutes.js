@@ -16,23 +16,40 @@ const transporter = nodemailer.createTransport({
 });
 
 // Add helper functions to email users.
-const sendStatusEmail = (to, status) => {
+const sendStatusEmail = (to, status, appUrl = "") => {
   const subject = "Your Account Status Has Been Updated";
   let text = "";
+  let html = "";
 
   if (status === "approved") {
-    text = `Hi, your account has been approved. You can now log in to the Lost & Found app.`;
+    text = `Hi, your account has been approved. You can now log in to the Lost & Found app by visiting: ${appUrl}`;
+    html = `
+      <p>Hi,</p>
+      <p>Your account has been approved. You can now log in to the Lost & Found app.</p>
+      <p>Click here to access the app: <a href="${appUrl}">Lost & Found App</a></p>
+      <p>Thanks,<br/>Lost & Found Team</p>
+    `;
   } else if (status === "rejected") {
     text = `Sorry, your account was not approved. You may contact the administrator for more details.`;
+    html = `
+      <p>Sorry,</p>
+      <p>Your account was not approved. You may contact the administrator for more details.</p>
+      <p>Thanks,<br/>Lost & Found Team</p>
+    `;
   } else if (status === "deleted") {
     text = `Your account has been permanently removed from the Lost & Found system.`;
+    html = `
+      <p>Your account has been permanently removed from the Lost & Found system.</p>
+      <p>Thanks,<br/>Lost & Found Team</p>
+    `;
   }
 
   return transporter.sendMail({
     from: `"Lost & Found Admin" <${process.env.ADMIN_EMAIL}>`,
     to,
     subject,
-    text,
+    text, // Plain text version for clients that don't render HTML.
+    html, // HTML version for rich email clients.
   });
 };
 
@@ -77,6 +94,13 @@ router.get("/users", verifyAdmin, async (req, res) => {
   }
 });
 
+// Handles redirect from email to app deep link.
+router.get("/deep-login", (req, res) => {
+  // Redirect to your app using custom URI scheme.
+  const deepLink = "lostfoundapp://login";
+  return res.redirect(302, deepLink);
+});
+
 // Approve user.
 router.patch("/users/:id/approve", verifyAdmin, async (req, res) => {
   try {
@@ -85,7 +109,8 @@ router.patch("/users/:id/approve", verifyAdmin, async (req, res) => {
 
     user.status = "approved";
     await user.save();
-    await sendStatusEmail(user.email, "approved");
+    const appUrl = `${process.env.API_URL}/api/admin/deep-login`;
+    await sendStatusEmail(user.email, "approved", appUrl);
 
     res.json({ message: "User approved and notified." });
   } catch (error) {
