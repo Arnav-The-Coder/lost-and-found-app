@@ -6,6 +6,7 @@ import job from "../src/lib/cron.js";
 import authRoutes from "./routes/authRoutes.js";
 import lostRoutes from "./routes/lostRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
 
 import connectDB from "./lib/db.js";
 
@@ -26,6 +27,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/lost", lostRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/contact", contactRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`);
