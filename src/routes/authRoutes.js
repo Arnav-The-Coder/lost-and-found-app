@@ -21,12 +21,17 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const notifyAdmin = (email, location) => {
+const notifyAdmin = (email, location, city, state) => {
   return transporter.sendMail({
     from: `"Lost & Found App" <${process.env.ADMIN_EMAIL}>`,
     to: process.env.ADMIN_EMAIL,
     subject: "New User Pending Approval",
-    text: `A new user has registered:\nEmail: ${email}\nLocation: ${location}\nApprove or reject in your admin dashboard.`,
+    text: `A new user has registered:
+Email: ${email}
+Location: ${location}
+City: ${city}
+State: ${state}
+Approve or reject in your admin dashboard.`,
   });
 };
 
@@ -41,10 +46,22 @@ const generateToken = (userId) => {
 
 router.post("/register", async (req, res) => {
   try {
-    const { email, location, password } = req.body;
+    const { email, location, city, state, password } = req.body;
 
-    if (!location || !email || !password) {
+    if (!location || !city || !state || !email || !password) {
       return res.status(400).json({ message: "All fields are required." });
+    }
+
+    if (city.length < 2) {
+      return res
+        .status(400)
+        .json({ message: "City must be at least 2 characters long." });
+    }
+
+    if (state.length < 2) {
+      return res
+        .status(400)
+        .json({ message: "State must be at least 2 characters long." });
     }
 
     if (password.length < 6) {
@@ -76,6 +93,8 @@ router.post("/register", async (req, res) => {
     const user = new User({
       email,
       location,
+      city,
+      state,
       password,
       profileImage,
       status: "pending",
@@ -84,9 +103,7 @@ router.post("/register", async (req, res) => {
     await user.save();
 
     // Notify admin of pending user using nodemailer.
-    await notifyAdmin(email, location);
-
-    const token = generateToken(user._id);
+    await notifyAdmin(email, location, city, state);
 
     res.status(201).json({
       message: "Account created and pending admin approval.",
@@ -131,6 +148,8 @@ router.post("/login", async (req, res) => {
       user: {
         id: user._id,
         location: user.location,
+        city: user.city,
+        state: user.state,
         email: user.email,
         profileImage: user.profileImage,
         createdAt: user.createdAt,

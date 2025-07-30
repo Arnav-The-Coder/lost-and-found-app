@@ -8,6 +8,14 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    city: {
+      type: String,
+      required: true,
+    },
+    state: {
+      type: String,
+      required: true,
+    },
     email: {
       type: String,
       required: true,

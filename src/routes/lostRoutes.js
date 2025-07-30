@@ -55,7 +55,7 @@ router.get("/", async (req, res) => {
       .sort({ createdAt: -1 }) // Sort by creation date in descending order.
       .skip(skip) // Skip the number of items based on the page.
       .limit(limit) // Limit the number of items returned.
-      .populate("user", "location profileImage"); // Populate the user field with location and profileImage.
+      .populate("user", "location city state profileImage"); // Populate the user field with location and profileImage.
 
     const totalItems = await Lost.countDocuments(); // Get the total number of lost items.
 
@@ -112,9 +112,9 @@ router.delete("/:id", protectRoute, async (req, res) => {
 // Get lost items found by the logged-in user.
 router.get("/user", protectRoute, async (req, res) => {
   try {
-    const lostItems = await Lost.find({ user: req.user._id }).sort({
-      createdAt: -1,
-    });
+    const lostItems = await Lost.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .populate("user", "location city state profileImage");
     res.json(lostItems);
   } catch (error) {
     console.log("Error fetching user's lost items:", error);
@@ -140,23 +140,25 @@ router.post("/report", async (req, res) => {
 
     // Compose the email body for the admin
     const mailBody = `
-      A lost item was reported by a user.
+  A lost item was reported by a user.
 
-      LOST ITEM DETAILS
-      -----------------
-      Object:      ${lostItem.object}
-      Description: ${lostItem.description}
-      Image:       ${lostItem.image}
-      Created at:  ${lostItem.createdAt}
+  LOST ITEM DETAILS
+  -----------------
+  Object:      ${lostItem.object}
+  Description: ${lostItem.description}
+  Image:       ${lostItem.image}
+  Created at:  ${lostItem.createdAt}
 
-      POSTED BY ACCOUNT
-      -----------------
-      Email:    ${poster.email}
-      Location: ${poster.location}
-      User ID:  ${poster._id}
+  POSTED BY ACCOUNT
+  -----------------
+  Email:       ${poster.email}
+  Location:    ${poster.location}
+  City:        ${poster.city || "N/A"}
+  State:       ${poster.state || "N/A"}
+  User ID:     ${poster._id}
 
-      You may investigate this listing in the admin dashboard and consider removing the account if necessary.
-    `.trim();
+  You may investigate this listing in the admin dashboard and consider removing the account if necessary.
+`.trim();
 
     // Send mail to admin
     await transporter.sendMail({
