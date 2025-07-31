@@ -1,6 +1,5 @@
 import express from "express";
 import nodemailer from "nodemailer";
-import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
@@ -12,7 +11,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-router.post("/contact-admin", protectRoute, async (req, res) => {
+router.post("/contact-admin", async (req, res) => {
   const { message } = req.body;
   if (!message || message.trim().length === 0)
     return res.status(400).json({ message: "Message is required." });
@@ -21,8 +20,8 @@ router.post("/contact-admin", protectRoute, async (req, res) => {
     const mailOptions = {
       from: `"Lost & Found App" <${process.env.ADMIN_EMAIL}>`,
       to: process.env.ADMIN_EMAIL,
-      subject: `Contact Admin Message from User ${req.user.email}`,
-      text: `User Email: ${req.user.email}\n\nMessage:\n${message}`,
+      subject: `Contact Admin Message`,
+      text: `Message:\n${message}`,
     };
 
     await transporter.sendMail(mailOptions);
