@@ -2,18 +2,20 @@ import express from "express";
 import User from "../models/User.js";
 import { verifyAdmin } from "../middleware/admin.middleware.js";
 import nodemailer from "nodemailer";
+import mailgunTransport from "nodemailer-mailgun-transport";
 import LostItem from "../models/Lost.js";
 
 const router = express.Router();
 
 // Create transporter to send the email.
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.ADMIN_EMAIL,
-    pass: process.env.ADMIN_PASSWORD,
-  },
-});
+const transporter = nodemailer.createTransport(
+  mailgunTransport({
+    auth: {
+      api_key: process.env.MAILGUN_API_KEY,
+      domain: process.env.MAILGUN_DOMAIN,
+    },
+  })
+);
 
 // Add helper functions to email users.
 const sendStatusEmail = (to, status, appUrl = "") => {
@@ -45,7 +47,7 @@ const sendStatusEmail = (to, status, appUrl = "") => {
   }
 
   return transporter.sendMail({
-    from: `"Lost & Found Admin" <${process.env.ADMIN_EMAIL}>`,
+    from: `"Lost & Found Admin" <no-reply@${process.env.MAILGUN_DOMAIN}>`,
     to,
     subject,
     text, // Plain text version for clients that don't render HTML.

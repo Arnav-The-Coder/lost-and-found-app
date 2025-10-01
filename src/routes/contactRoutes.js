@@ -1,15 +1,17 @@
 import express from "express";
 import nodemailer from "nodemailer";
+import mailgunTransport from "nodemailer-mailgun-transport";
 
 const router = express.Router();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.ADMIN_EMAIL,
-    pass: process.env.ADMIN_PASSWORD,
-  },
-});
+const transporter = nodemailer.createTransport(
+  mailgunTransport({
+    auth: {
+      api_key: process.env.MAILGUN_API_KEY,
+      domain: process.env.MAILGUN_DOMAIN,
+    },
+  })
+);
 
 router.post("/contact-admin", async (req, res) => {
   const { message } = req.body;
@@ -18,7 +20,7 @@ router.post("/contact-admin", async (req, res) => {
 
   try {
     const mailOptions = {
-      from: `"Lost & Found App" <${process.env.ADMIN_EMAIL}>`,
+      from: `"Lost & Found App" <no-reply@${process.env.MAILGUN_DOMAIN}>`,
       to: process.env.ADMIN_EMAIL,
       subject: `Contact Admin Message`,
       text: `Message:\n${message}`,

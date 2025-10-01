@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import mailgunTransport from "nodemailer-mailgun-transport";
 import crypto from "crypto";
 
 /*
@@ -13,17 +14,18 @@ import crypto from "crypto";
 */
 const router = express.Router();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.ADMIN_EMAIL,
-    pass: process.env.ADMIN_PASSWORD,
-  },
-});
+const transporter = nodemailer.createTransport(
+  mailgunTransport({
+    auth: {
+      api_key: process.env.MAILGUN_API_KEY,
+      domain: process.env.MAILGUN_DOMAIN,
+    },
+  })
+);
 
 const notifyAdmin = (email, location, city, state) => {
   return transporter.sendMail({
-    from: `"Lost & Found App" <${process.env.ADMIN_EMAIL}>`,
+    from: `"Lost & Found App" <no-reply@${process.env.MAILGUN_DOMAIN}>`,
     to: process.env.ADMIN_EMAIL,
     subject: "New User Pending Approval",
     text: `A new user has registered:
@@ -32,6 +34,22 @@ Location: ${location}
 City: ${city}
 State: ${state}
 Approve or reject in your admin dashboard.`,
+  });
+};
+
+const sendPendingEmail = (email) => {
+  return transporter.sendMail({
+    from: `"Lost & Found App" <no-reply@${process.env.MAILGUN_DOMAIN}>`,
+    to: email,
+    subject: "Your Account is Pending Approval",
+    text: `Hello,\n\nThank you for registering with Lost & Found App.\nYour account is currently pending admin approval.\nWe will notify you via email once your account is approved or rejected.\n\nThanks,\nLost & Found Team`,
+    html: `
+      <p>Hello,</p>
+      <p>Thank you for registering with Lost & Found App.</p>
+      <p>Your account is currently pending admin approval.</p>
+      <p>We will notify you via email once your account is approved or rejected.</p>
+      <p>Thanks,<br/>Lost & Found Team</p>
+    `,
   });
 };
 
@@ -105,8 +123,12 @@ router.post("/register", async (req, res) => {
     // Notify admin of pending user using nodemailer.
     await notifyAdmin(email, location, city, state);
 
+    // Notify user that there account is pending approval from the admin.
+    await sendPendingEmail(email);
+
     res.status(201).json({
-      message: "Account created and pending admin approval.",
+      message:
+        "Account created and pending admin approval. You will be notified via email.",
     });
   } catch (error) {
     console.log("Error registering user:", error);
@@ -184,7 +206,7 @@ router.post("/forgot-password", async (req, res) => {
 
     // Send reset email.
     await transporter.sendMail({
-      from: `"Lost & Found Admin" <${process.env.ADMIN_EMAIL}>`,
+      from: `"Lost & Found Admin" <no-reply@${process.env.MAILGUN_DOMAIN}>`,
       to: user.email,
       subject: "Password Reset Request",
       text:
